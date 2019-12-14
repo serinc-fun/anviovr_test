@@ -6,6 +6,8 @@
 #include "GameFramework/Character.h"
 #include "AnvioVRTestProjectCharacter.generated.h"
 
+class IInteractable;
+
 UCLASS(config=Game)
 class AAnvioVRTestProjectCharacter : public ACharacter
 {
@@ -18,9 +20,15 @@ class AAnvioVRTestProjectCharacter : public ACharacter
 	/** Follow camera */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
 	class UCameraComponent* FollowCamera;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
+	UCapsuleComponent* InteractableDetector;
+	
 public:
 	AAnvioVRTestProjectCharacter();
 
+	virtual void BeginPlay() override;
+	
 	/** Base turn rate, in deg/sec. Other scaling may affect final turn rate. */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category=Camera)
 	float BaseTurnRate;
@@ -63,10 +71,34 @@ protected:
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 	// End of APawn interface
 
+	UFUNCTION()
+	void OnIntercatbleDetectorOverlapBegin(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
+
+	UFUNCTION()
+	void OnIntercatbleDetectorOverlapEnd(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
+
+	UPROPERTY(Transient, BlueprintReadOnly, Category = Inventory)
+	TArray<TScriptInterface<IInteractable>> Inventory;
+	
 public:
 	/** Returns CameraBoom subobject **/
 	FORCEINLINE class USpringArmComponent* GetCameraBoom() const { return CameraBoom; }
 	/** Returns FollowCamera subobject **/
 	FORCEINLINE class UCameraComponent* GetFollowCamera() const { return FollowCamera; }
+
+	UFUNCTION(BlueprintCallable, Category = Inventory)
+	void PutToInventory(TScriptInterface<IInteractable> InInteractable);
+
+	UFUNCTION(BlueprintCallable, Category = Inventory)
+	bool RemoveFromInventory(TScriptInterface<IInteractable> InInteractable);
+
+	UFUNCTION(BlueprintPure, Category = Inventory)
+	bool IsInventoryEmpty() const;
+
+	UFUNCTION(BlueprintPure, Category = Inventory)
+	bool HasOnInventory(TScriptInterface<IInteractable> InInteractable) const;
+
+	UFUNCTION(BlueprintPure, Category = Inventory)
+	FORCEINLINE TArray<TScriptInterface<IInteractable>> GetInventoryItems() const { return Inventory; }
 };
 

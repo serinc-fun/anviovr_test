@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+#include "Interactable.h"
 #include "Terminal.generated.h"
 
 class USkeletalMeshComponent;
@@ -11,22 +12,21 @@ class UBoxComponent;
 class UArrowComponent;
 
 UCLASS()
-class ANVIOVRTESTPROJECT_API ATerminal : public AActor
+class ANVIOVRTESTPROJECT_API ATerminal
+	: public AActor
+	, public IInteractable
 {
 	GENERATED_BODY()
 	
 public:	
-	// Sets default values for this actor's properties
+
 	ATerminal();
 
 protected:
-	// Called when the game starts or when spawned
-	virtual void BeginPlay() override;
 
-public:	
-	// Called every frame
-	virtual void Tick(float DeltaTime) override;
-
+	virtual bool CanInteract_Implementation(AAnvioVRTestProjectCharacter* InInstigator) override;
+	virtual void Interact_Implementation(AAnvioVRTestProjectCharacter* InInstigator) override;
+	
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite)
 	USceneComponent* Root;
 		
@@ -41,4 +41,16 @@ public:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite)
 	UArrowComponent* Arrow;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Access)
+	TSubclassOf<AActor> KeyType;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Access)
+	TScriptInterface<IInteractable> Key;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Access)
+	bool bTerminalActivated = false;
+
+	UFUNCTION(BlueprintImplementableEvent, Category = Activation)
+	void OnInteracted(bool IsSuccess);
 };

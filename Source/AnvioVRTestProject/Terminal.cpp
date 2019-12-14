@@ -5,11 +5,10 @@
 #include "Components/SkeletalMeshComponent.h"
 #include "Components/BoxComponent.h"
 #include "Components/ArrowComponent.h"
+#include "AnvioVRTestProjectCharacter.h"
 
-// Sets default values
 ATerminal::ATerminal()
 {
- 	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
 
 	Root = CreateDefaultSubobject<USceneComponent>(TEXT("USceneComponent"));
@@ -25,17 +24,35 @@ ATerminal::ATerminal()
 	Arrow = CreateDefaultSubobject<UArrowComponent>(TEXT("Arrow"));
 }
 
-// Called when the game starts or when spawned
-void ATerminal::BeginPlay()
+bool ATerminal::CanInteract_Implementation(AAnvioVRTestProjectCharacter* InInstigator)
 {
-	Super::BeginPlay();
-	
+	if (InInstigator && InInstigator->IsValidLowLevel())
+	{
+		return !InInstigator->IsInventoryEmpty();
+	}
+
+	return false;
 }
 
-// Called every frame
-void ATerminal::Tick(float DeltaTime)
+void ATerminal::Interact_Implementation(AAnvioVRTestProjectCharacter* InInstigator)
 {
-	Super::Tick(DeltaTime);
+	if (InInstigator && InInstigator->IsValidLowLevel())
+	{
+		auto InstigatorInventory = InInstigator->GetInventoryItems();
+		for (auto& TargetItem : InstigatorInventory)
+		{
+			if (TargetItem.GetObject() && (Key.GetObject() && TargetItem == Key || TargetItem.GetObject()->GetClass() == KeyType))
+			{
+				if (InInstigator->RemoveFromInventory(TargetItem))
+				{
+					bTerminalActivated = true;
+					OnInteracted(true);
 
+					return;
+				}				
+			}
+		}
+	}
+
+	OnInteracted(false);
 }
-

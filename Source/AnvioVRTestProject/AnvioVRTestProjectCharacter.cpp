@@ -8,6 +8,7 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/Controller.h"
 #include "GameFramework/SpringArmComponent.h"
+#include "Interactable.h"
 
 //////////////////////////////////////////////////////////////////////////
 // AAnvioVRTestProjectCharacter
@@ -43,8 +44,18 @@ AAnvioVRTestProjectCharacter::AAnvioVRTestProjectCharacter()
 	FollowCamera->SetupAttachment(CameraBoom, USpringArmComponent::SocketName); // Attach the camera to the end of the boom and let the boom adjust to match the controller orientation
 	FollowCamera->bUsePawnControlRotation = false; // Camera does not rotate relative to arm
 
-	// Note: The skeletal mesh and anim blueprint references on the Mesh component (inherited from Character) 
-	// are set in the derived blueprint asset named MyCharacter (to avoid direct content references in C++)
+	InteractableDetector = CreateDefaultSubobject<UCapsuleComponent>(TEXT("InteractableDetector"));
+	InteractableDetector->SetupAttachment(RootComponent);
+	InteractableDetector->SetCollisionProfileName(TEXT("Pawn"));
+	
+}
+
+void AAnvioVRTestProjectCharacter::BeginPlay()
+{
+	Super::BeginPlay();
+
+	InteractableDetector->OnComponentBeginOverlap.AddDynamic(this, &AAnvioVRTestProjectCharacter::OnIntercatbleDetectorOverlapBegin);
+	InteractableDetector->OnComponentEndOverlap.AddDynamic(this, &AAnvioVRTestProjectCharacter::OnIntercatbleDetectorOverlapEnd);
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -76,6 +87,60 @@ void AAnvioVRTestProjectCharacter::SetupPlayerInputComponent(class UInputCompone
 	PlayerInputComponent->BindAction("ResetVR", IE_Pressed, this, &AAnvioVRTestProjectCharacter::OnResetVR);
 }
 
+void AAnvioVRTestProjectCharacter::OnIntercatbleDetectorOverlapBegin(UPrimitiveComponent* OverlappedComponent,
+	AActor* OtherActor,
+	UPrimitiveComponent* OtherComp,
+	int32 OtherBodyIndex,
+	bool bFromSweep,
+	const FHitResult& SweepResult)
+{
+	if (OtherActor && OtherActor->IsValidLowLevel() && OtherActor->Implements<UInteractable>())
+	{
+		if (IInteractable::Execute_CanInteract(OtherActor, this))
+		{
+			IInteractable::Execute_Interact(OtherActor, this);
+		}
+	}
+}
+
+void AAnvioVRTestProjectCharacter::OnIntercatbleDetectorOverlapEnd(UPrimitiveComponent* OverlappedComponent,
+	AActor* OtherActor,
+	UPrimitiveComponent* OtherComp,
+	int32 OtherBodyIndex)
+{
+	
+}
+
+void AAnvioVRTestProjectCharacter::PutToInventory(TScriptInterface<IInteractable> InInteractable)
+{
+	Inventory.Add(InInteractable);
+}
+
+bool AAnvioVRTestProjectCharacter::RemoveFromInventory(TScriptInterface<IInteractable> InInteractable)
+{
+	return Inventory.Remove(InInteractable) > 0;
+}
+
+bool AAnvioVRTestProjectCharacter::IsInventoryEmpty() const
+{
+	return Inventory.Num() == 0;
+}
+
+bool AAnvioVRTestProjectCharacter::HasOnInventory(TScriptInterface<IInteractable> InInteractable) const
+{
+	if (!IsInventoryEmpty())
+	{
+		for (auto& TargetItem : Inventory)
+		{
+			if (TargetItem == InInteractable)
+			{
+				return true;
+			}
+		}
+	}
+
+	return false;
+}
 
 void AAnvioVRTestProjectCharacter::OnResetVR()
 {
